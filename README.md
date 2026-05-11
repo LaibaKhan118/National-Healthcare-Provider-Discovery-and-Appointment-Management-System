@@ -1,2 +1,0 @@
-# National-Healthcare-Provider-Discovery-and-Appointment-Management-System
-This project proposes the development of a web-based Healthcare Provider Discovery and Appointment Management System built using Laravel and MySQL. The system allows patients to search, compare, and book doctors while incorporating an analytical ranking mechanism and several real-world healthcare workflows to support informed decision-making.
