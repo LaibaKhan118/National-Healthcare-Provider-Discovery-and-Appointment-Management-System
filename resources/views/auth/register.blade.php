@@ -50,11 +50,34 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Role</label>
-                                <select class="form-select" name="role" required>
+                                <select class="form-select" name="role" id="roleSelect" required>
                                     <option value="">-- Select Role --</option>
                                     <option value="patient" {{ old('role') === 'patient' ? 'selected' : '' }}>Patient</option>
                                     <option value="doctor" {{ old('role') === 'doctor' ? 'selected' : '' }}>Doctor</option>
                                 </select>
+                            </div>
+
+                            <div id="hospitalSection" style="display: none;">
+                                <div class="mb-3">
+                                    <label class="form-label">Hospital Affiliation</label>
+                                    @forelse ($hospitals as $hospital)
+                                        <div class="form-check">
+                                            <input
+                                                class="form-check-input"
+                                                type="checkbox"
+                                                name="hospital_ids[]"
+                                                value="{{ $hospital->hospital_id }}"
+                                                id="reg_hospital_{{ $hospital->hospital_id }}"
+                                                {{ is_array(old('hospital_ids')) && in_array($hospital->hospital_id, old('hospital_ids')) ? 'checked' : '' }}
+                                            >
+                                            <label class="form-check-label" for="reg_hospital_{{ $hospital->hospital_id }}">
+                                                {{ $hospital->hospital_name }}
+                                            </label>
+                                        </div>
+                                    @empty
+                                        <p class="text-muted">No hospitals available. Contact admin.</p>
+                                    @endforelse
+                                </div>
                             </div>
 
                             <div class="row">
@@ -83,5 +106,22 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const roleSelect = document.getElementById('roleSelect');
+        const hospitalSection = document.getElementById('hospitalSection');
+
+        function toggleHospitalSection() {
+            if (roleSelect.value === 'doctor') {
+                hospitalSection.style.display = 'block';
+            } else {
+                hospitalSection.style.display = 'none';
+            }
+        }
+
+        roleSelect.addEventListener('change', toggleHospitalSection);
+
+        // Initialize on page load
+        toggleHospitalSection();
+    </script>
 </body>
 </html>

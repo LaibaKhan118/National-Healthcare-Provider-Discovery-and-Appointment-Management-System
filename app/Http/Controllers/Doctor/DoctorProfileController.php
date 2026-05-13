@@ -18,7 +18,11 @@ class DoctorProfileController extends Controller
         abort_if(!$doctor, 404);
 
         $specializations = DB::table('specializations')->orderBy('specialization_name')->get();
-        $hospitals = DB::table('hospitals')->orderBy('city')->orderBy('hospital_name')->get();
+        $hospitals = DB::table('hospitals')
+            ->where('is_pending_verification', 0)
+            ->orderBy('city')
+            ->orderBy('hospital_name')
+            ->get();
 
         $doctorSpecs = DB::table('doctor_specializations')
             ->where('doctor_id', $doctor->doctor_id)
@@ -35,6 +39,12 @@ class DoctorProfileController extends Controller
 
     public function update(Request $request)
 {
+    \Log::info('Profile update request', [
+        'all_input' => $request->all(),
+        'hospital_ids' => $request->input('hospital_ids'),
+        'hospital_ids_filled' => $request->filled('hospital_ids'),
+    ]);
+
     $user = auth()->user();
     $doctor = DB::table('doctors')->where('user_id', $user->user_id)->first();
 
@@ -44,8 +54,8 @@ class DoctorProfileController extends Controller
         'consultation_fee'  => 'nullable|numeric|min:0',
         'city'              => 'nullable|string|max:100',
         'bio'               => 'nullable|string',
-        'hospital_id'       => 'nullable|exists:hospitals,hospital_id',
-        'new_hospital_name' => 'nullable|string|max:200',
+        'hospital_ids'      => 'nullable|array',
+        'hospital_ids.*'    => 'integer|exists:hospitals,hospital_id',
         'specialization_ids'   => 'nullable|array',
         'specialization_ids.*' => 'integer|exists:specializations,specialization_id',
     ]);
@@ -61,10 +71,10 @@ class DoctorProfileController extends Controller
                 'consultation_fee' => $request->input('consultation_fee'),
                 'city'             => $request->input('city'),
                 'bio'              => $request->input('bio'),
-                'updated_at'       => now(),
             ]);
 
         // Sync specializations
+        \Log::info('Starting specialization sync');
         DB::table('doctor_specializations')
             ->where('doctor_id', $doctor->doctor_id)
             ->delete();
@@ -78,42 +88,35 @@ class DoctorProfileController extends Controller
                 ];
             }
             DB::table('doctor_specializations')->insert($rows);
+            \Log::info('Specializations synced successfully');
         }
-        // Sync hospital
-        $hospitalId = null;
 
-        if ($request->filled('hospital_id')) {
-            // Existing hospital selected from dropdown
-            $hospitalId = (int) $request->hospital_id;
-
-        } elseif ($request->filled('new_hospital_name')) {
-            // New hospital typed — create as pending
-            $hospitalId = DB::table('hospitals')->insertGetId([
-                'hospital_name'           => trim($request->new_hospital_name),
-                'city'                    => null,
-                'address'                 => null,
-                'is_pending_verification' => 1,
-                'created_at'              => now(),
-                'updated_at'              => now(),
-            ]);
-        }
-        
-        dd([
-            'hospitalId'   => $hospitalId,
-            'doctor_id'    => $doctor->doctor_id,
-            'doctor_obj'   => $doctor,
-        ]);
-
-        // Delete old hospital links and insert new one
+        // Sync hospitals (multiple)
+        \Log::info('About to start hospital sync section');
         DB::table('doctor_hospitals')
             ->where('doctor_id', $doctor->doctor_id)
             ->delete();
+        \Log::info('Deleted existing doctor_hospitals records');
 
-        if ($hospitalId) {
-            DB::table('doctor_hospitals')->insert([
-                'doctor_id'   => $doctor->doctor_id,
-                'hospital_id' => $hospitalId,
-            ]);
+        \Log::info('Hospital sync check', [
+            'filled' => $request->filled('hospital_ids'),
+            'input' => $request->input('hospital_ids'),
+            'hospital_ids_array' => (array) $request->input('hospital_ids', []),
+        ]);
+
+        if ($request->filled('hospital_ids')) {
+            $rows = [];
+            foreach ($request->input('hospital_ids') as $hospitalId) {
+                $rows[] = [
+                    'doctor_id'   => $doctor->doctor_id,
+                    'hospital_id' => (int) $hospitalId,
+                ];
+            }
+            \Log::info('Inserting hospitals', ['rows' => $rows, 'doctor_id' => $doctor->doctor_id]);
+            DB::table('doctor_hospitals')->insert($rows);
+            \Log::info('Hospitals inserted successfully');
+        } else {
+            \Log::info('No hospitals to insert - request.filled returned false');
         }
 
         DB::commit();
@@ -121,6 +124,11 @@ class DoctorProfileController extends Controller
             ->with('success', 'Profile updated successfully!');
 
     } catch (\Exception $e) {
+        \Log::error('Profile update failed with exception', [
+            'error' => $e->getMessage(),
+            'line' => $e->getLine(),
+            'file' => $e->getFile(),
+        ]);
         DB::rollBack();
         return back()->withInput()
             ->with('error', 'Update failed: ' . $e->getMessage());

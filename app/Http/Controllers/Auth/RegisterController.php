@@ -12,7 +12,12 @@ class RegisterController extends Controller
 {
     public function showRegistrationForm()
     {
-        return view('auth.register');
+        $hospitals = DB::table('hospitals')
+            ->where('is_pending_verification', 0)
+            ->orderBy('hospital_name')
+            ->get();
+
+        return view('auth.register', compact('hospitals'));
     }
 
     public function register(Request $request)
@@ -23,8 +28,8 @@ class RegisterController extends Controller
         'email'            => 'required|email|unique:users',
         'password'         => 'required|min:8|confirmed',
         'role'             => 'required|in:patient,doctor',
-        'hospital_id'      => 'nullable|exists:hospitals,hospital_id',
-        'new_hospital_name'=> 'nullable|string|max:200',
+        'hospital_ids'     => 'nullable|array',
+        'hospital_ids.*'   => 'integer|exists:hospitals,hospital_id',
     ]);
 
     $roleId = $request->role === 'doctor' ? 2 : 3;
@@ -44,39 +49,22 @@ class RegisterController extends Controller
         ]);
 
         if ($roleId == 2) {
-            // 2. Create doctor record FIRST and capture the ID directly
+            // 2. Create doctor record
             $doctorId = DB::table('doctors')->insertGetId([
                 'user_id'    => $userId,
                 'is_verified'=> 0,
-                'created_at' => now(),
-                'updated_at' => now(),
             ]);
 
-            // 3. Resolve hospital_id
-            $hospitalId = null;
-
-            // Priority 1: existing hospital selected from dropdown
-            if ($request->filled('hospital_id')) {
-                $hospitalId = (int) $request->hospital_id;
-            }
-            // Priority 2: new hospital name typed in
-            elseif ($request->filled('new_hospital_name')) {
-                $hospitalId = DB::table('hospitals')->insertGetId([
-                    'hospital_name'            => trim($request->new_hospital_name),
-                    'city'                     => null,
-                    'address'                  => null,
-                    'is_pending_verification'  => 1,
-                    'created_at'               => now(),
-                    'updated_at'               => now(),
-                ]);
-            }
-
-            // 4. Link hospital to doctor
-            if ($hospitalId) {
-                DB::table('doctor_hospitals')->insert([
-                    'doctor_id'   => $doctorId,  // Use captured ID directly
-                    'hospital_id' => $hospitalId,
-                ]);
+            // 3. Link hospitals to doctor
+            if ($request->filled('hospital_ids')) {
+                $rows = [];
+                foreach ($request->input('hospital_ids') as $hospitalId) {
+                    $rows[] = [
+                        'doctor_id'   => $doctorId,
+                        'hospital_id' => (int) $hospitalId,
+                    ];
+                }
+                DB::table('doctor_hospitals')->insert($rows);
             }
 
             DB::commit();
@@ -89,8 +77,6 @@ class RegisterController extends Controller
             // Patient registration
             DB::table('patients')->insert([
                 'user_id'    => $userId,
-                'created_at' => now(),
-                'updated_at' => now(),
             ]);
 
             DB::commit();

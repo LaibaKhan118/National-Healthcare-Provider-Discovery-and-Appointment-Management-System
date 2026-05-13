@@ -88,68 +88,39 @@
                                 </div>
                             </div>
                             
-                            @php
-                                $currentHospital = DB::table('doctor_hospitals')
-                                    ->join('hospitals', 'hospitals.hospital_id', '=', 'doctor_hospitals.hospital_id')
-                                    ->where('doctor_hospitals.doctor_id', $doctor->doctor_id)
-                                    ->select('hospitals.hospital_id', 'hospitals.hospital_name', 'hospitals.is_pending_verification')
-                                    ->first();
-                            @endphp
-
                             <div class="mb-3">
-                                <label class="form-label">Hospital</label>
-
-                                {{-- Show pending hospital notice --}}
-                                @if ($currentHospital && $currentHospital->is_pending_verification)
-                                    <div class="alert alert-warning py-2">
-                                        ⚠️ Your hospital <strong>{{ $currentHospital->hospital_name }}</strong>
-                                        is pending admin verification.
-                                    </div>
-                                @endif
-
-                                {{-- Select existing hospital --}}
-                                <select class="form-select mb-2" name="hospital_id" id="hospital_id">
-                                    <option value="">-- Select Existing Hospital --</option>
-                                    @foreach (DB::table('hospitals')->whereNull('deleted_at')->get() as $hospital)
-                                        <option value="{{ $hospital->hospital_id }}"
-                                            {{ ($currentHospital && $currentHospital->hospital_id == $hospital->hospital_id) ? 'selected' : '' }}>
+                                <label class="form-label">Hospitals</label>
+                                @forelse ($hospitals as $hospital)
+                                    <div class="form-check">
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            name="hospital_ids[]"
+                                            value="{{ $hospital->hospital_id }}"
+                                            id="hospital_{{ $hospital->hospital_id }}"
+                                            {{ in_array($hospital->hospital_id, $doctorHospitals) ? 'checked' : '' }}
+                                        >
+                                        <label class="form-check-label" for="hospital_{{ $hospital->hospital_id }}">
                                             {{ $hospital->hospital_name }}
-                                            {{ $hospital->is_pending_verification ? '(Pending)' : '' }}
-                                        </option>
-                                    @endforeach
-                                </select>
-
-                                {{-- Or type a new one --}}
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    name="new_hospital_name"
-                                    id="new_hospital_name"
-                                    placeholder="Or type new hospital name if not in list"
-                                >
-                                <small class="form-text text-muted mt-1 d-block">
-                                    Leave the text field empty if selecting from the dropdown above.
-                                </small>
+                                            {!! $hospital->is_pending_verification ? '<span class="badge bg-warning">Pending</span>' : '' !!}
+                                        </label>
+                                    </div>
+                                @empty
+                                    <p class="text-muted">No hospitals available. Contact admin.</p>
+                                @endforelse
                             </div>
                             
                             <div class="mb-3">
                                 <label class="form-label">Specializations</label>
-                                <?php
-                                    $selectedSpecs = DB::table('doctor_specializations')
-                                        ->where('doctor_id', $doctor->doctor_id)
-                                        ->pluck('specialization_id')
-                                        ->toArray();
-                                    $allSpecs = DB::table('specializations')->get();
-                                ?>
-                                @foreach ($allSpecs as $spec)
+                                @foreach ($specializations as $spec)
                                     <div class="form-check">
-                                        <input 
-                                            class="form-check-input" 
-                                            type="checkbox" 
-                                            name="specialization_ids[]" 
+                                        <input
+                                            class="form-check-input"
+                                            type="checkbox"
+                                            name="specialization_ids[]"
                                             value="{{ $spec->specialization_id }}"
                                             id="spec_{{ $spec->specialization_id }}"
-                                            {{ in_array($spec->specialization_id, $selectedSpecs) ? 'checked' : '' }}
+                                            {{ in_array($spec->specialization_id, $doctorSpecs) ? 'checked' : '' }}
                                         >
                                         <label class="form-check-label" for="spec_{{ $spec->specialization_id }}">
                                             {{ $spec->specialization_name }}
