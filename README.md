@@ -1,4 +1,4 @@
-# 🏥 National Healthcare Provider Discovery & Appointment Management System
+# National Healthcare Provider Discovery & Appointment Management System
 
 > A full-stack web application for discovering doctors, booking appointments, and managing healthcare workflows — built with Laravel 12 and MySQL.
 
@@ -261,17 +261,11 @@ national-healthcare-system/
 
 ## Team
 
-Developed by **Group [Your Group Number]** — FAST-NUCES Karachi, Spring 2026
-
-| Name               | Student ID | Role                     |
-| ------------------ | ---------- | ------------------------ |
-| Laiba Khan         | 24K-0644   | Team Lead / Backend      |
-| Abeeha Binte Aamer | 24K-0940   | Backend / Database       |
-| Aamna Rizwan       | 24K-0695   | Frontend / Documentation |
-
-**Course:** CS 2005 — Database Systems
-**Instructor:** Sir Shoaib Rauf
-**Semester:** Spring 2026
+| Name               | Role                     |
+| ------------------ | ------------------------ |
+| Laiba Khan         | Team Lead / Backend      |
+| Abeeha Binte Aamer | Backend / Database       |
+| Aamna Rizwan       | Frontend / Documentation |
 
 ---
 
@@ -287,7 +281,3 @@ This project demonstrates the following database concepts:
 - ✅ **Aggregate Functions** — `COUNT`, `AVG`, `SUM`, `GROUP_CONCAT`
 - ✅ **Soft Deletes** — `deleted_at` on all tables for data retention
 - ✅ **Role-based programs** — Separate controllers and logic per user role
-
----
-
-_Built with ❤️ for CS 2005 — Database Systems, FAST-NUCES Karachi_
